@@ -1,0 +1,9 @@
+[k8sMasters]
+k8sMaster ansible_host=192.168.1.170
+
+[k8sWorkers]
+k8sWorker1 ansible_host=192.168.1.171
+k8sWorker2 ansible_host=192.168.1.172
+k8sWorker3 ansible_host=192.168.1.173
+k8sWorker4 ansible_host=192.168.1.174
+k8sWorker5 ansible_host=192.168.1.175

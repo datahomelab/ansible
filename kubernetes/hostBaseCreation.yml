@@ -1,0 +1,18 @@
+---
+- hosts: all
+  remote_user: christian
+  become: yes
+  become_method: sudo
+
+  tasks:
+
+  - name: Update repositories cache
+    apt:
+      update_cache: yes
+
+  - name: install ntp
+    apt:
+      name: ntp
+      state: present
+      update_cache: yes
+  

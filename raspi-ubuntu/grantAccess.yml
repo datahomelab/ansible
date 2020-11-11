@@ -1,0 +1,67 @@
+---
+- hosts: ubuntu
+  remote_user: root
+
+# Before running execute sudo mkdir /root/.ssh && sudo nano /root/.ssh/authorized_keys
+# and copy the id_rsa.pub key from the ansible server
+
+  handlers:
+  - name: "Restart sshd"
+    service:
+      name: "sshd"
+      state: "restarted"
+
+  tasks:
+
+  - name: Set hostname from inventory file
+    hostname:
+      name: "{{ inventory_hostname }}"
+
+  - name: Set timezone to Asia/Kuala_Lumpur
+    timezone:
+      name: Asia/Kuala_Lumpur
+
+  - name: install sudo
+    apt:
+      name: sudo
+      state: present
+      update_cache: yes
+
+  - name: Remove user "ubuntu"
+    user:
+      name: ubuntu
+      state: absent
+      remove: yes
+
+  - name: Ensure group "christian" exists
+    group:
+      name: christian
+      state: present
+
+  - name: "Create user accounts"
+    user:
+      name: "christian"
+      groups: "christian"
+      state: "present"
+      shell: /bin/bash
+
+  - name: "Add authorized keys"
+    authorized_key:
+      user: "christian"
+      key: "{{ lookup('file', '/Users/christian/.ssh/id_rsa.pub') }}"
+
+  - name: "Allow admin users to sudo without a password"
+    lineinfile:
+      dest: "/etc/sudoers"
+      state: "present"
+      regexp: "^%root"
+      insertafter: "^#root"
+      line: "christian ALL=(ALL) NOPASSWD: ALL"
+
+  - name: "Disable root login via SSH"
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^PermitRootLogin"
+      line: "PermitRootLogin no"
+    notify: "Restart sshd"
+...

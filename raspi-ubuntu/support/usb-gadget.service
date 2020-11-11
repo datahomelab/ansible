@@ -1,0 +1,11 @@
+[Unit]
+Description="USB Gadget Service"
+Before=dnsmasq.service
+
+[Service]
+User=root
+WorkingDirectory=/root
+ExecStart=/root/usb.sh
+
+[Install]
+WantedBy=dnsmasq.service multi-user.target

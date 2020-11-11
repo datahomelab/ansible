@@ -1,0 +1,68 @@
+---
+- hosts: pi
+  remote_user: christian
+  become: yes
+  become_method: sudo
+
+  tasks:
+
+    - name: Adding dwc2 to dtoverlay in config.txt
+      lineinfile:
+        state: present
+        insertafter: EOF
+        dest:  /boot/config.txt
+        line: dtoverlay=dwc2
+
+    - name: Adding modules-load=dwc2 to the end of cmdline.txt
+      replace: dest=/boot/cmdline.txt regexp='(\s+)$' replace=' modules-load=dwc2'
+
+    - name: Adding libcomposite to /etc/modules
+      lineinfile:
+        state: present
+        insertafter: EOF
+        dest:  /etc/modules
+        line: libcomposite
+
+    - name: Adding denyinterfaces usb0 to /etc/dhcpcd.conf
+      lineinfile:
+        state: present
+        insertafter: EOF
+        dest:  /etc/dhcpcd.conf
+        line: denyinterfaces usb0
+
+    - name: install dnsmasq
+      apt:
+        name: dnsmasq
+        state: present
+
+    - name: Create /etc/dnsmasq.d/usb
+      copy:
+        src: "{{ lookup('env', 'PWD') }}/support/usb"
+        dest: /etc/dnsmasq.d/usb
+
+    - name: Create /etc/network/interfaces.d/usb0
+      copy:
+        src: "{{ lookup('env', 'PWD') }}/support/usb0"
+        dest: /etc/network/interfaces.d/usb0
+
+    - name: Create /root/usb.sh
+      copy:
+        src: "{{ lookup('env', 'PWD') }}/support/usb.sh"
+        dest: /root/usb.sh
+        mode: u=xrw,g=xr,o=xr
+
+    - name: Add /root/usb.sh to startup
+      blockinfile:
+        path: /etc/rc.local
+        marker: "# -- {mark} ANSIBLE MANAGED BLOCK --"
+        insertafter: "fi"
+        block: |
+          /root/usb.sh
+
+    - name: Reloading the added modules
+      reboot:
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: uptime

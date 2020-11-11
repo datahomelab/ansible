@@ -1,0 +1,25 @@
+---
+- hosts: ubuntu
+  remote_user: christian
+  become: yes
+  become_method: sudo
+
+  tasks:
+
+  - name: Connect to WIFI
+    blockinfile:
+      state: present
+      insertafter: 'version: 2'
+      dest: /etc/netplan/50-cloud-init.yaml
+      block: |4
+              wifis:
+                  wlan0:
+                      optional: true
+                      access-points:
+                        "kungfupanda":
+                           password: "a330b777cd"
+                      dhcp4: true
+
+  - name: Apply Netplan
+    shell:
+      cmd: netplan apply

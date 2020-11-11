@@ -1,0 +1,22 @@
+---
+- hosts: pi
+  remote_user: christian
+  become: yes
+  become_method: sudo
+
+  tasks:
+
+  - name: Copy wpa_supplicant.conf
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/support/{{ item }}"
+      dest: "/boot/{{ item }}"
+    with_items:
+      - 'wpa_supplicant.conf'
+
+  - name: Reloading wpa_supplicant
+    reboot:
+      connect_timeout: 5
+      reboot_timeout: 300
+      pre_reboot_delay: 0
+      post_reboot_delay: 30
+      test_command: uptime

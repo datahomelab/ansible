@@ -1,0 +1,81 @@
+---
+- hosts: ubuntu
+  remote_user: christian
+  become: yes
+  become_method: sudo
+
+  tasks:
+
+  - name: Adding dwc2 to dtoverlay in config.txt
+    lineinfile:
+      state: present
+      regexp: '^(.*)#dtoverlay=dwc2(.*)$'
+      dest:  /boot/firmware/config.txt
+      line: dtoverlay=dwc2,dr_mode=peripheral
+
+  - name: Adding modules-load=dwc2 to the end of cmdline.txt
+    replace: dest=/boot/firmware/cmdline.txt regexp='(\s+)$' replace=' modules-load=dwc2'
+
+  - name: Adding libcomposite to /etc/modules
+    lineinfile:
+      state: present
+      insertafter: EOF
+      dest:  /etc/modules
+      line: libcomposite
+
+  - name: Adding denyinterfaces usb0 to /etc/dhcpcd.conf
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/support/dhcpcd.conf"
+      dest: /etc/dhcpcd.conf
+
+  - name: install dnsmasq
+    apt:
+      name: dnsmasq
+      state: present
+
+  - name: Create /etc/dnsmasq.d/usb
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/support/usb"
+      dest: /etc/dnsmasq.d/usb
+
+  - name: Preparing the netplan file
+    lineinfile:
+      dest: /etc/netplan/50-cloud-init.yaml
+      state: absent
+      regexp: '^(.*)version: 2(.*)$'
+
+  - name: Assign the USB gadget a network address
+    blockinfile:
+      state: present
+      insertafter: 'set-name: eth0'
+      dest: /etc/netplan/50-cloud-init.yaml
+      block: |4
+                  usb0:
+                      dhcp4: false
+                      optional: true
+                      addresses: [10.55.0.1/29]
+              version: 2
+              wifis:
+                  wlan0:
+                      optional: true
+                      access-points:
+                        "kungfupanda":
+                           password: "a330b777cd"
+                      dhcp4: true
+  - name: Apply Netplan
+    shell:
+      cmd: netplan apply
+
+  - name: Create /root/usb.sh
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/support/usb.sh"
+      dest: /root/usb.sh
+      mode: u=xrw,g=xr,o=xr
+
+  - name: Reloading the added modules
+    reboot:
+      connect_timeout: 5
+      reboot_timeout: 300
+      pre_reboot_delay: 0
+      post_reboot_delay: 30
+      test_command: uptime

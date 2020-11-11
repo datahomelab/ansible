@@ -1,0 +1,216 @@
+---
+- hosts: all
+  remote_user: christian
+  become: yes
+  become_method: sudo
+
+  tasks:
+
+  - name: Update apt-get repo and cache
+    apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+
+  - name: Upgrade all apt packages
+    apt: upgrade=dist force_apt_get=yes
+
+  - name: Remove snap
+    apt:
+      pkg: snapd
+      state: absent
+
+  - name: Clean unwanted old stuff
+    apt:
+      autoremove: yes
+      purge: yes
+
+  - name: Check if a reboot is needed for Debian and Ubuntu boxes
+    register: reboot_required_file
+    stat: path=/var/run/reboot-required get_md5=no
+
+  - name: Reboot the Debian or Ubuntu server
+    reboot:
+      msg: "Reboot initiated by Ansible due to kernel updates"
+      connect_timeout: 5
+      reboot_timeout: 300
+      pre_reboot_delay: 0
+      post_reboot_delay: 30
+      test_command: uptime
+    when: reboot_required_file.stat.exists
+
+  - name: Set hostname from inventory file
+    hostname:
+      name: "{{ inventory_hostname }}"
+
+  - name: Install miscellaneous packages with apt
+    apt:
+      name: "{{ item }}"
+      state: present
+    with_items:
+        - screenfetch
+        - lolcat
+        - ntp
+        - apt-transport-https
+        - gnupg2
+        - ca-certificates
+        - software-properties-common
+
+  - name: add apt-key for Docker
+    apt_key:
+      url: https://download.docker.com/linux/debian/gpg
+      state: present
+
+  - name: add apt repo for Docker
+    apt_repository:
+      repo: deb https://download.docker.com/linux/debian buster stable
+      state: present
+      filename: 'docker'
+
+  - name: install Docker
+    apt:
+      name: docker-ce
+      state: present
+      update_cache: true
+
+  - name: "Add to Docker group"
+    user:
+      name: "christian"
+      groups: "docker"
+      state: "present"
+
+  - name: Beautify Login process
+    lineinfile:
+      state: present
+      insertafter: EOF
+      dest: /home/christian/.profile
+      line: "{{ item }}"
+    with_items:
+        - 'clear && screenfetch | lolcat'
+
+  - name: Set the swap to off
+    shell:
+      cmd: swapoff -a
+
+  - name: Remove Swap entry from /etc/fstab.
+    lineinfile:
+      dest: /etc/fstab
+      regexp: swap
+      state: absent
+    register: task_result
+
+  - name: Overclock to 1800GHz
+    lineinfile:
+      state: present
+      insertafter: EOF
+      dest: /boot/firmware/config.txt
+      line: "{{ item }}"
+    with_items:
+      - 'over_voltage=5'
+      - 'arm_freq=1800'
+      - 'gpu_freq=750'
+    register: task_result
+
+  - name: Reboot immediately if there was a change.
+    shell: "sleep 5 && reboot"
+    async: 1
+    poll: 0
+    when: task_result is changed
+
+  - name: Wait for the reboot to complete if there was a change.
+    wait_for_connection:
+      connect_timeout: 20
+      sleep: 5
+      delay: 5
+      timeout: 300
+    when: task_result is changed
+
+  - name: Download htop
+    shell: wget https://github.com/avafinger/htop_2.2.2/releases/download/v1.8/htop_2.2.2-8_arm64.deb
+    args:
+      chdir: /tmp/
+
+  - name: Installing htop
+    shell: dpkg -i htop_2.2.2-8_arm64.deb
+    args:
+      chdir: /tmp/
+
+  - name: Cleaning Up htop
+    shell: rm htop_2.2.2-8_arm64.deb
+    args:
+      chdir: /tmp/
+
+  - name: ansible create directory htop
+    file:
+      path: /home/christian/.config/htop
+      state: directory
+
+  - name: Copy htoprc with owner and permission, using symbolic representation
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/Support/htoprc"
+      dest: /home/christian/.config/htop/htoprc
+      owner: christian
+      group: christian
+      mode: u=rw,g=r,o=r
+
+  - name: Check cmdline.txt
+    shell: cat /boot/cmdline.txt | grep -c 'lcgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1' || true
+    register: task_result
+
+  - name: Adding to the end of cmdline.txt
+    replace: dest=/boot/firmware/cmdline.txt regexp='(\s+)$' replace=' cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1'
+    when: task_result is changed
+
+  - name: Copy /etc/docker/daemon.json using symbolic representation
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/Support/daemon.json"
+      dest: /etc/docker/daemon.json
+      mode: u=rw,g=r,o=r
+    register: task_result
+
+  - name: Uncomment line from /etc/sysctl.conf
+    lineinfile:
+      dest: /etc/sysctl.conf
+      regexp: '^#net.ipv4.ip_forward=1'
+      line: 'net.ipv4.ip_forward=1'
+    register: task_result
+
+  - name: switch nftables to iptables
+    shell:
+      cmd: "{{ item }}"
+    loop:
+      - update-alternatives --set iptables /usr/sbin/iptables-legacy
+      - update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+
+  - name: add Kubernetes apt-key
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: add Kubernetes' APT repository
+    apt_repository:
+      repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: 'kubernetes'
+
+  - name: Reboot immediately if there was a change.
+    shell: "sleep 5 && reboot"
+    async: 1
+    poll: 0
+    when: task_result is changed
+
+  - name: Wait for the reboot to complete if there was a change.
+    wait_for_connection:
+      connect_timeout: 20
+      sleep: 5
+      delay: 5
+      timeout: 300
+    when: task_result is changed
+
+  - name: install kubelet
+    apt:
+      name: kubelet=1.19.0-00
+      state: present
+      update_cache: true
+
+  - name: install kubeadm
+    apt:
+      name: kubeadm=1.19.0-00
+      state: present

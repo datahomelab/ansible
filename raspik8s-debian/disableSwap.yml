@@ -1,0 +1,29 @@
+---
+- hosts: all
+  remote_user: christian
+  become: yes
+  become_method: sudo
+
+  tasks:
+
+  - name: Set the swap to off
+    shell:
+      cmd: dphys-swapfile swapoff
+
+  - name: Set the swap to off
+    shell:
+      cmd: dphys-swapfile uninstall
+
+  - name: Set the swap to off
+    shell:
+      cmd: update-rc.d dphys-swapfile remove
+
+  - name: Set the swap to off
+    shell:
+      cmd: systemctl disable dphys-swapfile.service
+
+  - name: Ensure the swap size is 0
+    lineinfile:
+      path: /etc/dphys-swapfile
+      regexp: '^CONF_SWAPSIZE'
+      line: CONF_SWAPSIZE=0
