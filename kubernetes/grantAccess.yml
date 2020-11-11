@@ -16,7 +16,7 @@
       state: present
       update_cache: yes
 
-  - name: Ensure group "christian" exists
+  - name: Ensure group christian exists
     group:
       name: christian
       state: present
