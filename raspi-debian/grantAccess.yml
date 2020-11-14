@@ -42,7 +42,7 @@
   - name: "Add authorized keys"
     authorized_key:
       user: "christian"
-      key: "{{ lookup('file', '/Users/christian/.ssh/id_rsa.pub') }}"
+      key: "{{ lookup('file', '/home/christian/.ssh/id_rsa.pub') }}"
 
   - name: "Allow admin users to sudo without a password"
     lineinfile:
