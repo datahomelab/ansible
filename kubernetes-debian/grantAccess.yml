@@ -10,6 +10,20 @@
 
   tasks:
 
+  - name: Setting hostname
+    hostname:
+      name: "{{ inventory_hostname }}"
+
+  - name: Changing /etc/hosts file
+    lineinfile:
+      dest: /etc/hosts
+      regexp: '^127\.0\.1\.1'
+      line: '127.0.1.1       {{ inventory_hostname }}'
+
+  - name: Set timezone to Asia/Kuala_Lumpur
+    timezone:
+      name: Asia/Kuala_Lumpur
+
   - name: install sudo
     apt:
       name: sudo
@@ -31,7 +45,7 @@
   - name: "Add authorized keys"
     authorized_key:
       user: "christian"
-      key: "{{ lookup('file', '/Users/christian/.ssh/id_rsa.pub') }}"
+      key: "{{ lookup('file', '/home/christian/.ssh/id_rsa.pub') }}"
 
   - name: "Allow admin users to sudo without a password"
     lineinfile:
