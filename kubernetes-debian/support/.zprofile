@@ -1,0 +1,1 @@
+clear && screenfetch | lolcat
