@@ -59,4 +59,4 @@
       dest: /home/christian/.profile
       line: "{{ item }}"
     with_items:
-        - 'clear && screenfetch | lolcat'
+        - 'clear && neofetch | lolcat'

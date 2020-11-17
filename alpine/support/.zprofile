@@ -1,1 +1,1 @@
-clear && screenfetch | lolcat
+clear && neofetch | lolcat
