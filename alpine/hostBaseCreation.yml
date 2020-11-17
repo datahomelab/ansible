@@ -51,6 +51,12 @@
     shell:
       cmd: rc-update add docker boot
 
+  - name: Opening Docker Daemon socket for remote access
+    lineinfile:
+      path: /etc/conf.d/docker
+      regexp: 'DOCKER_OPTS=""'
+      line: 'DOCKER_OPTS="-H=tcp://0.0.0.0:2375"'
+
   - name: Reboot the Alpine server
     reboot:
       connect_timeout: 5
