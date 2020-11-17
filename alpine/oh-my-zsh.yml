@@ -1,4 +1,4 @@
-- hosts: pi
+- hosts: alpine
   remote_user: christian
   become: yes
   become_method: sudo
@@ -7,7 +7,7 @@
 
   tasks:
 
-  - name: Install zsh with apt
+  - name: Install zsh with apk
     apt:
       name: "{{ item }}"
       state: present
