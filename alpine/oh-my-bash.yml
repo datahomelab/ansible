@@ -8,7 +8,7 @@
   tasks:
 
   - name: Install bash with apk
-    apt:
+    apk:
       name: "{{ item }}"
       state: present
       update_cache: true

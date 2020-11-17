@@ -8,7 +8,7 @@
   tasks:
 
   - name: Install zsh with apk
-    apt:
+    apk:
       name: "{{ item }}"
       state: present
       update_cache: true
