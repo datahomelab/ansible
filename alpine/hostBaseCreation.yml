@@ -13,11 +13,11 @@
     with_items:
       - 'repositories'
 
-  - name: Update apt-get repo and cache
+  - name: Update apk cache
     apk:
       update_cache: yes
 
-  - name: Upgrade all apt packages
+  - name: Upgrade all apk packages
     apk:
       upgrade: yes
 
@@ -37,7 +37,7 @@
         - docker
         - docker-compose
 
-  - name: "Add to Docker group"
+  - name: Add to Docker group
     user:
       name: "christian"
       groups: "docker"
