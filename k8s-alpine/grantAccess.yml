@@ -1,0 +1,84 @@
+---
+- hosts: alpine
+  remote_user: root
+
+# Before running execute mkdir /root/.ssh &&  nano /root/.ssh/authorized_keys
+# and copy the id_rsa.pub key from the ansible server
+
+  handlers:
+  - name: "Restart sshd"
+    service:
+      name: "sshd"
+      state: "restarted"
+
+  tasks:
+
+  - name: Setting hostname
+    hostname:
+      name: "{{ inventory_hostname }}"
+
+  - name: Changing /etc/hosts file
+    lineinfile:
+      dest: /etc/hosts
+      regexp: '^::1'
+      line: '::1       {{ inventory_hostname }}'
+
+  - name: Update Repositories
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/support/{{ item }}"
+      dest: /etc/apk/repositories
+    with_items:
+      - 'repositories'
+
+  - name: Update apk cache
+    apk:
+      update_cache: yes
+
+  - name: Upgrade all apk packages
+    apk:
+      upgrade: yes
+
+  - name: Install packages with apk
+    apk:
+      name: "{{ item }}"
+      state: present
+      update_cache: true
+    with_items:
+      - sudo
+      - git
+      - curl
+      - bash
+      - zsh
+      - neofetch
+      - lolcat
+
+  - name: "Create user accounts"
+    user:
+      name: "christian"
+      state: "present"
+      shell: /bin/bash
+
+  - name: "Add authorized keys"
+    authorized_key:
+      user: "christian"
+      key: "{{ lookup('file', '/home/christian/.ssh/id_rsa.pub') }}"
+
+  - name: "Allow admin users to sudo without a password"
+    lineinfile:
+      dest: "/etc/sudoers"
+      state: "present"
+      regexp: "^%root"
+      insertafter: "^#root"
+      line: "christian ALL=(ALL) NOPASSWD: ALL"
+
+  - name: Set the password for the user
+    shell:
+      cmd: echo christian:christian | chpasswd
+
+  - name: "Disable root login via SSH"
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^PermitRootLogin"
+      line: "PermitRootLogin no"
+    notify: "Restart sshd"
+...

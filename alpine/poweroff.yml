@@ -4,4 +4,4 @@
   tasks:
     - name: Reboot
       shell:
-        cmd: /sbin/shutdown now
+        cmd: /sbin/poweroff now
