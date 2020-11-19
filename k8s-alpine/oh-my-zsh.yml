@@ -1,4 +1,4 @@
-- hosts: alpine
+- hosts: k8sMasters
   remote_user: christian
   become: yes
   become_method: sudo
