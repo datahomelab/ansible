@@ -6,50 +6,63 @@
 
   tasks:
 
-  - name: Update apk cache
-    apk:
-      update_cache: yes
-
-  - name: Upgrade all apk packages
-    apk:
-      upgrade: yes
-
-  - name: Install Docker packages with apk
+  - name: Install containerd and k8s packages with apk
     apk:
       name: "{{ item }}"
       state: present
     with_items:
-        - docker
+        - containerd
+        - containerd-openrc
+        - kubelet
+        - kubernetes
+        - conntrack-tools
+        - kubeadm
+        - cri-tools
     register: task_result
 
-  - name: Add to Docker group
-    user:
-      name: "christian"
-      groups: "docker"
-      state: "present"
-
-  - name: Starting docker service
-    shell:
-      cmd: rc-update add docker default
-
-  - name: Create directory /etc/docker
+  - name: Create directory /etc/modules-load.d/containerd.conf
     file:
-      path: /etc/docker
+      path: /etc/modules-load.d/
       state: directory
 
-  - name: Copy /etc/docker/daemon.json using symbolic representation
+  - name: Copy /etc/modules-load.d/containerd.conf using symbolic representation
     copy:
-      src: "{{ lookup('env', 'PWD') }}/support/daemon.json"
-      dest: /etc/docker/daemon.json
+      src: "{{ lookup('env', 'PWD') }}/support/containerd.conf"
+      dest: /etc/modules-load.d/containerd.conf
       mode: u=rw,g=r,o=r
     register: task_result
 
-  - name: Uncomment line from /etc/sysctl.conf
-    lineinfile:
-      dest: /etc/sysctl.conf
-      state: present
-      line: 'net.ipv4.ip_forward=1'
+  - name: Copy /etc/sysctl.d/99-kubernetes-cri.conf using symbolic representation
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/support/99-kubernetes-cri.conf"
+      dest: /etc/sysctl.d/99-kubernetes-cri.conf
+      mode: u=rw,g=r,o=r
     register: task_result
+
+  - name: Create directory /etc/containerd
+    file:
+      path: /etc/containerd
+      state: directory
+
+  - name: Updating containerd plugin dir
+    shell:
+      cmd: containerd config default | sed "s|/opt/cni/bin|/usr/libexec/cni|g" > /etc/containerd/config.toml
+
+  - name: Setup required sysctl params, these persist across reboots.
+    shell:
+      cmd: sysctl -p /etc/sysctl.d/99-kubernetes-cri.conf
+
+  - name: Starting docker service
+    shell:
+      cmd: rc-update add containerd default
+
+  - name: Starting kubelet service
+    shell:
+      cmd: rc-update add kubelet default
+
+  - name: Prevent conflicts between docker iptables rules and k8s pod communication
+    shell:
+      cmd: iptables -P FORWARD ACCEPT
 
   - name: Reboot the Alpine server
     reboot:
@@ -59,11 +72,3 @@
       post_reboot_delay: 30
       test_command: uptime
     when: task_result is changed
-
-  - name: Install Kubernetes packages with apk
-    apk:
-      name: "{{ item }}"
-      state: present
-    with_items:
-        - kubelet
-        - kubeadm
