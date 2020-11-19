@@ -1,5 +1,5 @@
 ---
-- hosts: alpine
+- hosts: all
   remote_user: christian
   become: yes
   become_method: sudo
@@ -18,10 +18,9 @@
     apk:
       name: "{{ item }}"
       state: present
-      update_cache: true
     with_items:
         - docker
-        - docker-compose
+    register: task_result
 
   - name: Add to Docker group
     user:
@@ -31,7 +30,26 @@
 
   - name: Starting docker service
     shell:
-      cmd: rc-update add docker boot
+      cmd: rc-update add docker default
+
+  - name: Create directory /etc/docker
+    file:
+      path: /etc/docker
+      state: directory
+
+  - name: Copy /etc/docker/daemon.json using symbolic representation
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/support/daemon.json"
+      dest: /etc/docker/daemon.json
+      mode: u=rw,g=r,o=r
+    register: task_result
+
+  - name: Uncomment line from /etc/sysctl.conf
+    lineinfile:
+      dest: /etc/sysctl.conf
+      state: present
+      line: 'net.ipv4.ip_forward=1'
+    register: task_result
 
   - name: Reboot the Alpine server
     reboot:
@@ -40,3 +58,12 @@
       pre_reboot_delay: 0
       post_reboot_delay: 30
       test_command: uptime
+    when: task_result is changed
+
+  - name: Install Kubernetes packages with apk
+    apk:
+      name: "{{ item }}"
+      state: present
+    with_items:
+        - kubelet
+        - kubeadm
