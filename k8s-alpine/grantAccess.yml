@@ -101,11 +101,12 @@
       line: "UsePAM no"
 
   - name: "Disable root login via SSH"
+    remote_user: christian
+    become: yes
     lineinfile:
       dest: "/etc/ssh/sshd_config"
       regexp: "^PermitRootLogin"
       line: "PermitRootLogin no"
-    notify: "Restart sshd"
 
   - name: Rebooting the Alpine Cluster
     remote_user: christian

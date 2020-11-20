@@ -6,18 +6,13 @@
 
   tasks:
 
-  - name: Install containerd and k8s packages with apk
+  - name: Install containerd packages with apk
     apk:
       name: "{{ item }}"
       state: present
     with_items:
         - containerd
         - containerd-openrc
-        - kubelet
-        - kubernetes
-        - conntrack-tools
-        - kubeadm
-        - cri-tools
     register: task_result
 
   - name: Create directory /etc/modules-load.d/containerd.conf
@@ -39,6 +34,10 @@
       mode: u=rw,g=r,o=r
     register: task_result
 
+  - name: Setup required sysctl params, these persist across reboots.
+    shell:
+      cmd: sysctl -p /etc/sysctl.d/99-kubernetes-cri.conf
+
   - name: Create directory /etc/containerd
     file:
       path: /etc/containerd
@@ -48,13 +47,25 @@
     shell:
       cmd: containerd config default | sed "s|/opt/cni/bin|/usr/libexec/cni|g" > /etc/containerd/config.toml
 
-  - name: Setup required sysctl params, these persist across reboots.
+  - name: Adding docker service to default runlevel
     shell:
-      cmd: sysctl -p /etc/sysctl.d/99-kubernetes-cri.conf
+      cmd: rc-update add containerd default
 
   - name: Starting docker service
     shell:
-      cmd: rc-update add containerd default
+      cmd: rc-service containerd start
+
+  - name: Install k8s packages with apk
+    apk:
+      name: "{{ item }}"
+      state: present
+    with_items:
+        - kubernetes
+        - conntrack-tools
+        - kubelet
+        - kubeadm
+        - cri-tools
+    register: task_result
 
   - name: Starting kubelet service
     shell:
