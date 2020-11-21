@@ -2,4 +2,8 @@
 k8s-alpine-master ansible_host=192.168.1.190
 
 #[k8sWorkers]
-#k8s-alpine-worker-01 ansible_host=192.168.1.191
+k8s-alpine-worker-01 ansible_host=192.168.1.191
+k8s-alpine-worker-02 ansible_host=192.168.1.192
+k8s-alpine-worker-03 ansible_host=192.168.1.193
+k8s-alpine-worker-04 ansible_host=192.168.1.194
+k8s-alpine-worker-05 ansible_host=192.168.1.195

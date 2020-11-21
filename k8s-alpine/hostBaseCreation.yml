@@ -6,38 +6,29 @@
 
   tasks:
 
-  # - name: Install docker packages with apk
-  #   apk:
-  #     name: "{{ item }}"
-  #     state: present
-  #   with_items:
-  #       - containerd
-  #       - containerd-openrc
-  #   register: task_result
-
   - name: Install docker packages with apk
     apk:
       name: "{{ item }}"
       state: present
     with_items:
-        - docker
-        - docker-compose
+        - containerd
+        - containerd-openrc
     register: task_result
 
-  # - name: Copy /etc/modules-load.d/containerd.conf using symbolic representation
-  #   copy:
-  #     src: "{{ lookup('env', 'PWD') }}/support/containerd.conf"
-  #     dest: /etc/modules-load.d/containerd.conf
-  #     mode: u=rw,g=r,o=r
-  #   register: task_result
-  #
-  # - name: Executing modprobe overlay
-  #   shell:
-  #     cmd: modprobe overlay
-  #
-  # - name: Executing modprobe overlay
-  #   shell:
-  #     cmd: modprobe br_netfilter
+  - name: Copy /etc/modules-load.d/containerd.conf using symbolic representation
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/support/containerd.conf"
+      dest: /etc/modules-load.d/containerd.conf
+      mode: u=rw,g=r,o=r
+    register: task_result
+
+  - name: Executing modprobe overlay
+    shell:
+      cmd: modprobe overlay
+
+  - name: Executing modprobe overlay
+    shell:
+      cmd: modprobe br_netfilter
 
   - name: Copy /etc/sysctl.d/99-kubernetes-cri.conf using symbolic representation
     copy:
@@ -46,33 +37,18 @@
       mode: u=rw,g=r,o=r
     register: task_result
 
-  # - name: Creating containerd config directory
-  #   file:
-  #     path: /etc/containerd
-  #     state: directory
-  #
-  # - name: Updating the plugin dir
-  #   shell:
-  #     cmd: containerd config default | sed "s|/opt/cni/bin|/usr/libexec/cni|g" > /etc/containerd/config.toml
+  - name: Creating containerd config directory
+    file:
+      path: /etc/containerd
+      state: directory
 
-  - name: Starting docker
+  - name: Updating the plugin dir
     shell:
-      cmd: service docker start
+      cmd: containerd config default | sed "s|/opt/cni/bin|/usr/libexec/cni|g" > /etc/containerd/config.toml
 
-  - name: Copy /etc/docker/daemon.json using symbolic representation
-    copy:
-      src: "{{ lookup('env', 'PWD') }}/support/daemon.json"
-      dest: /etc/docker/daemon.json
-      mode: u=rw,g=r,o=r
-    register: task_result
-
-  # - name: Adding containerd service to default runlevel
-  #   shell:
-  #     cmd: rc-update add containerd default
-
-  - name: Adding docker service to default runlevel
+  - name: Adding containerd service to default runlevel
     shell:
-      cmd: rc-update add docker default
+      cmd: rc-update add containerd default
 
   - name: Install k8s packages with apk
     apk:
@@ -84,6 +60,7 @@
         - kubelet
         - kubeadm
         - cri-tools
+        - cni-plugins
     register: task_result
 
   - name: Starting kubelet service
