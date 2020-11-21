@@ -11,8 +11,14 @@
     shell:
       cmd: kubeadm config images pull
 
+  # - name: initialize the cluster with standard Flannel subnet
+  #   shell: kubeadm init --cri-socket /run/containerd/containerd.sock --pod-network-cidr=10.244.0.0/16 >> cluster_initialized.txt
+  #   args:
+  #     chdir: $HOME
+  #     creates: cluster_initialized.txt
+
   - name: initialize the cluster with standard Flannel subnet
-    shell: kubeadm init --cri-socket /run/containerd/containerd.sock --pod-network-cidr=10.244.0.0/16 >> cluster_initialized.txt
+    shell: kubeadm init --pod-network-cidr=10.244.0.0/16 >> cluster_initialized.txt
     args:
       chdir: $HOME
       creates: cluster_initialized.txt
