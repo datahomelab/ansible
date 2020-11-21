@@ -6,26 +6,34 @@
 
   tasks:
 
-  - name: Install containerd packages with apk
+  - name: Install docker packages with apk
     apk:
       name: "{{ item }}"
       state: present
     with_items:
-        - containerd
-        - containerd-openrc
+        - docker
     register: task_result
 
-  - name: Create directory /etc/modules-load.d/containerd.conf
-    file:
-      path: /etc/modules-load.d/
-      state: directory
+  - name: "Add to Docker group"
+    user:
+      name: "christian"
+      groups: "docker"
+      state: "present"
 
-  - name: Copy /etc/modules-load.d/containerd.conf using symbolic representation
+  - name: Starting docker service
+    shell:
+      cmd: rc-service docker start
+
+  - name: Copy /etc/docker/daemon.json using symbolic representation
     copy:
-      src: "{{ lookup('env', 'PWD') }}/support/containerd.conf"
-      dest: /etc/modules-load.d/containerd.conf
+      src: "{{ lookup('env', 'PWD') }}/support/daemon.json"
+      dest: /etc/docker/daemon.json
       mode: u=rw,g=r,o=r
     register: task_result
+
+  - name: Updating containerd plugin dir
+    shell:
+      cmd: containerd config default | sed "s|/opt/cni/bin|/usr/libexec/cni|g" > /var/run/docker/containerd/config.toml
 
   - name: Copy /etc/sysctl.d/99-kubernetes-cri.conf using symbolic representation
     copy:
@@ -38,22 +46,9 @@
     shell:
       cmd: sysctl -p /etc/sysctl.d/99-kubernetes-cri.conf
 
-  - name: Create directory /etc/containerd
-    file:
-      path: /etc/containerd
-      state: directory
-
-  - name: Updating containerd plugin dir
-    shell:
-      cmd: containerd config default | sed "s|/opt/cni/bin|/usr/libexec/cni|g" > /etc/containerd/config.toml
-
   - name: Adding docker service to default runlevel
     shell:
-      cmd: rc-update add containerd default
-
-  - name: Starting docker service
-    shell:
-      cmd: rc-service containerd start
+      cmd: rc-update add docker default
 
   - name: Install k8s packages with apk
     apk:
@@ -61,10 +56,8 @@
       state: present
     with_items:
         - kubernetes
-        - conntrack-tools
         - kubelet
         - kubeadm
-        - cri-tools
     register: task_result
 
   - name: Starting kubelet service

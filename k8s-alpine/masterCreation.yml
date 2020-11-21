@@ -12,7 +12,7 @@
       cmd: kubeadm init phase kubelet-start
 
   - name: initialize the cluster with standard Flannel subnet
-    shell: kubeadm init --pod-network-cidr=10.244.0.0/16 --cri-socket /run/containerd/containerd.sock >> cluster_initialized.txt
+    shell: kubeadm init --pod-network-cidr=10.244.0.0/16  --cri-socket /var/run/docker/containerd/containerd.sock >> cluster_initialized.txt
     args:
       chdir: $HOME
       creates: cluster_initialized.txt
