@@ -7,12 +7,12 @@
       name: kubectl
       state: present
 
-  - name: Creating a default kubelet config
+  - name: Pulling k8s images
     shell:
-      cmd: kubeadm init phase kubelet-start
+      cmd: kubeadm config images pull
 
   - name: initialize the cluster with standard Flannel subnet
-    shell: kubeadm init --pod-network-cidr=10.244.0.0/16  --cri-socket /var/run/docker/containerd/containerd.sock >> cluster_initialized.txt
+    shell: kubeadm init --cri-socket /run/containerd/containerd.sock --pod-network-cidr=10.244.0.0/16 >> cluster_initialized.txt
     args:
       chdir: $HOME
       creates: cluster_initialized.txt
