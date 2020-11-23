@@ -1,7 +1,0 @@
----
-- hosts: all
-  become: yes
-  tasks:
-    - name: Reboot
-      shell:
-        cmd: /sbin/poweroff now
