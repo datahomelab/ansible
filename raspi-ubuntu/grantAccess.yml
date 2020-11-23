@@ -29,7 +29,7 @@
 
   - name: Remove user "ubuntu"
     user:
-      name: chrisgelso
+      name: ubuntu
       state: absent
       remove: yes
 
