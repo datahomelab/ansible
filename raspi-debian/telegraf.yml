@@ -36,7 +36,7 @@
       shell:
         cmd: setcap 'cap_net_admin,cap_net_raw+ep' $(which ping)
 
-    - name: Copy .zshrc, .p10k.zsh and .zprofile with owner and permission
+    - name: Copy telegraf.conf with owner and permission
       copy:
         src: "{{ lookup('env', 'PWD') }}/support/{{ item }}"
         dest: "/etc/telegraf/{{ item }}"

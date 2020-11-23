@@ -8,16 +8,31 @@
 
   tasks:
 
-  - name: Update apt-get repo and cache
-    apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
-
-  - name: Upgrade all apt packages
-    apt: upgrade=dist force_apt_get=yes
+  - name: Uninstall X11
+    apt:
+      name: "{{ item }}"
+      state: absent
+      update_cache: true
+    with_items:
+      - x11-common
+      - bluez
+      - gnome-menus
+      - gnome-icon-theme
+      - gnome-themes-standard
+      - hicolor-icon-theme
+      - gnome-themes-extra-data
+      - bluealsa
+      - cifs-utils
+      - desktop-base
+      - desktop-file-utils
 
   - name: Clean unwanted old stuff
     apt:
       autoremove: yes
       purge: yes
+
+  - name: Upgrade all apt packages
+    apt: upgrade=dist force_apt_get=yes
 
   - name: Check if a reboot is needed for Debian and Ubuntu boxes
     register: reboot_required_file
@@ -132,60 +147,6 @@
       name: docker.service
       state: started
       enabled: yes
-
-  - name: Install bash with apt
-    apt:
-      name: "{{ item }}"
-      state: present
-      update_cache: true
-    with_items:
-      - git
-      - curl
-      - bash
-
-  - name: Changing shell to bash
-    user:
-      name: christian
-      shell: /bin/bash
-
-  - name: Checking if oh-my-zsh exists
-    stat:
-      path: "{{ base_dir }}/.oh-my-bash"
-    register: OMZ_dir
-
-  - name: Installing oh-my-bash
-    become: yes
-    become_user: christian
-    git:
-      repo: git://github.com/ohmybash/oh-my-bash.git
-      dest: "{{ base_dir }}/.oh-my-bash"
-    when: OMZ_dir.stat.exists == 0
-
-  - name: Copy .bashrc with owner and permission
-    become: yes
-    become_user: christian
-    copy:
-      src: "{{ lookup('env', 'PWD') }}/support/{{ item }}"
-      dest: "{{ base_dir }}/{{ item }}"
-    with_items:
-      - '.bashrc'
-
-  - name: Add a better ll command to the aliases
-    blockinfile:
-      path: "{{ base_dir }}/.oh-my-bash/aliases/ls.aliases.sh"
-      marker: "# -- {mark} ANSIBLE MANAGED BLOCK --"
-      insertafter: "alias la='ls -Al'               # show hidden"
-      block: |
-        alias ll='ls -l'                # show hidden files
-
-  - name: Beautify Login process
-    lineinfile:
-      state: present
-      insertafter: EOF
-      dest: /home/christian/.profile
-      line: "{{ item }}"
-    with_items:
-        - 'clear && screenfetch | lolcat'
 
   - name: Download better htop
     get_url:
