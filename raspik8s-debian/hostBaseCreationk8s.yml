@@ -8,7 +8,7 @@
 
   tasks:
 
-  - name: Uninstall X11
+  - name: Uninstall X11 and Unnecessary Packages for k8s
     apt:
       name: "{{ item }}"
       state: absent
@@ -25,6 +25,9 @@
       - cifs-utils
       - desktop-base
       - desktop-file-utils
+      - alsa-utils
+      - wpasupplicant
+      - avahi-daemon
 
   - name: Clean unwanted old stuff
     apt:
