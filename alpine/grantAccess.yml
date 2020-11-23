@@ -1,8 +1,8 @@
 ---
-- hosts: alpine
+- hosts: all
   remote_user: root
 
-# Before running execute sudo mkdir /root/.ssh && sudo nano /root/.ssh/authorized_keys
+# Before running execute mkdir /root/.ssh &&  nano /root/.ssh/authorized_keys
 # and copy the id_rsa.pub key from the ansible server
 
   handlers:
@@ -17,23 +17,40 @@
     hostname:
       name: "{{ inventory_hostname }}"
 
-  - name: Changing /etc/hosts file
-    lineinfile:
-      dest: /etc/hosts
-      regexp: '^::1'
-      line: '::1       {{ inventory_hostname }}'
+  # - name: Changing /etc/hosts file
+  #   lineinfile:
+  #     dest: /etc/hosts
+  #     regexp: '^::1'
+  #     line: '::1       {{ inventory_hostname }}'
 
-  - name: install sudo
+  - name: Update Repositories
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/support/{{ item }}"
+      dest: /etc/apk/repositories
+    with_items:
+      - 'repositories'
+
+  - name: Update apk cache
     apk:
-      name: sudo
-      state: present
       update_cache: yes
 
-  - name: install bash
+  - name: Upgrade all apk packages
     apk:
-      name: bash
+      upgrade: yes
+
+  - name: Install packages with apk
+    apk:
+      name: "{{ item }}"
       state: present
-      update_cache: yes
+    with_items:
+      - sudo
+      - git
+      - curl
+      - bash
+      - zsh
+      - neofetch
+      - lolcat
+      - htop
 
   - name: "Create user accounts"
     user:
@@ -58,10 +75,48 @@
     shell:
       cmd: echo christian:christian | chpasswd
 
+  - name: Remove Swap entry from /etc/fstab.
+    lineinfile:
+      dest: /etc/fstab
+      regexp: swap
+      state: absent
+    register: task_result
+
+  - name: "Disable ChallengeResponseAuthentication via SSH"
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^#ChallengeResponseAuthentication"
+      line: "ChallengeResponseAuthentication no"
+
+  - name: "Disable PasswordAuthentication via SSH"
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^#PasswordAuthentication"
+      line: "PasswordAuthentication no"
+
+  - name: "Disable UsePAM via SSH"
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^#UsePAM"
+      line: "UsePAM no"
+
   - name: "Disable root login via SSH"
+    remote_user: christian
+    become: yes
     lineinfile:
       dest: "/etc/ssh/sshd_config"
       regexp: "^PermitRootLogin"
       line: "PermitRootLogin no"
-    notify: "Restart sshd"
+
+  - name: Rebooting the Alpine Cluster
+    remote_user: christian
+    become: yes
+    reboot:
+      connect_timeout: 5
+      reboot_timeout: 300
+      pre_reboot_delay: 0
+      post_reboot_delay: 30
+      test_command: uptime
+    when: task_result is changed
+
 ...

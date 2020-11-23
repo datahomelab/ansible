@@ -1,3 +1,3 @@
 [alpine]
 
-alpineserver ansible_host=192.168.1.190
+alpineserver ansible_host=192.168.1.200

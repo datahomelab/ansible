@@ -6,7 +6,7 @@
 
   tasks:
 
-  - name: Install docker packages with apk
+  - name: Install containerd packages with apk
     apk:
       name: "{{ item }}"
       state: present
@@ -63,7 +63,7 @@
         - cni-plugins
     register: task_result
 
-  - name: Starting kubelet service
+  - name: Adding containerd kubelet to default runlevel
     shell:
       cmd: rc-update add kubelet default
 
