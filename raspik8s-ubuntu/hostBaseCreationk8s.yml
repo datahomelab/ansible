@@ -10,9 +10,9 @@
   tasks:
 
   - name: Uninstalling snap
-      apt:
-        pkg: snapd
-        state: absent
+    apt:
+      pkg: snapd
+      state: absent
 
   - name: Cleaning unwanted old stuff
     apt:
