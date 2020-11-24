@@ -1,12 +1,4 @@
-- hosts: pi
-  remote_user: christian
-  become: yes
-  become_method: sudo
-  vars:
-    base_dir: /home/christian
-
-  tasks:
-
+---
   - name: Install zsh with apt
     apt:
       name: "{{ item }}"
@@ -24,7 +16,7 @@
 
   - name: Checking if oh-my-zsh exists
     stat:
-      path: "{{ base_dir }}/.oh-my-zsh"
+      path: "/home/christian/.oh-my-zsh"
     register: OMZ_dir
 
   - name: Installing oh-my-zsh
@@ -39,7 +31,7 @@
     become_user: christian
     git:
       repo: https://github.com/romkatv/powerlevel10k.git
-      dest: "{{ base_dir }}/.oh-my-zsh/custom/themes/powerlevel10k"
+      dest: "/home/christian/.oh-my-zsh/custom/themes/powerlevel10k"
     when: OMZ_dir.stat.exists == 0
 
   - name: Installing zsh-syntax-highlighting
@@ -47,7 +39,7 @@
     become_user: christian
     git:
       repo: "https://github.com/zsh-users/{{ item }}.git"
-      dest: "{{ base_dir }}/.oh-my-zsh/custom/plugins/{{ item }}"
+      dest: "/home/christian/.oh-my-zsh/custom/plugins/{{ item }}"
     with_items:
       - 'zsh-autosuggestions'
       - 'zsh-syntax-highlighting'
@@ -59,7 +51,7 @@
     become_user: christian
     copy:
       src: "{{ lookup('env', 'PWD') }}/support/{{ item }}"
-      dest: "{{ base_dir }}/{{ item }}"
+      dest: "/home/christian/{{ item }}"
     with_items:
       - '.zshrc'
       - '.p10k.zsh'

@@ -1,0 +1,110 @@
+---
+
+- hosts: all
+  remote_user: root
+
+  tasks:
+
+  - name: Set hostname from inventory file
+    hostname:
+      name: "{{ inventory_hostname }}"
+
+  - name: Setting timezone to Asia/Kuala_Lumpur
+    timezone:
+      name: Asia/Kuala_Lumpur
+
+  - name: Installing sudo
+    apt:
+      name: sudo
+      state: present
+
+  - name: Remove user "ubuntu"
+    user:
+      name: ubuntu
+      state: absent
+      remove: yes
+
+  - name: Creating user account
+    user:
+      name: christian
+      state: present
+      shell: /bin/bash
+
+  - name: Adding authorized keys
+    authorized_key:
+      user: "christian"
+      key: "{{ lookup('file', '/home/christian/.ssh/id_rsa.pub') }}"
+
+  - name: Allowing admin users to sudo without a password
+    lineinfile:
+      dest: "/etc/sudoers"
+      state: "present"
+      regexp: "^%root"
+      insertafter: "^#root"
+      line: "christian ALL=(ALL) NOPASSWD: ALL"
+
+  - name: Set the swap to off
+    shell:
+      cmd: swapoff -a
+
+  - name: Removing swap entry from /etc/fstab if present
+    lineinfile:
+      dest: /etc/fstab
+      regexp: swap
+      state: absent
+
+  - name: Overclocking to 1800GHz
+    lineinfile:
+      state: present
+      insertafter: EOF
+      dest: /boot/firmware/config.txt
+      line: "{{ item }}"
+    with_items:
+      - 'over_voltage=5'
+      - 'arm_freq=1800'
+      - 'gpu_freq=750'
+
+  - name: Checking cmdline.txt for cgroup
+    shell: cat /boot/firmware/cmdline.txt | grep -c 'lcgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1' || true
+    register: task_result
+
+  - name: Adding cgroup to the end of cmdline.txt
+    replace: dest=/boot/firmware/cmdline.txt regexp='(\s+)$' replace=' cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1'
+    when: task_result is changed
+
+  - name: "Disable ChallengeResponseAuthentication via SSH"
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^#ChallengeResponseAuthentication"
+      line: "ChallengeResponseAuthentication no"
+
+  - name: "Disable PasswordAuthentication via SSH"
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^#PasswordAuthentication"
+      line: "PasswordAuthentication no"
+
+  - name: "Disable UsePAM via SSH"
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^#UsePAM"
+      line: "UsePAM no"
+
+  - name: Disabling root login via SSH
+    remote_user: christian
+    become: yes
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^PermitRootLogin"
+      line: "PermitRootLogin no"
+
+  - name: Rebooting the cluster to apply hardware configuration changes
+    remote_user: christian
+    become: yes
+    reboot:
+      connect_timeout: 5
+      reboot_timeout: 300
+      pre_reboot_delay: 0
+      post_reboot_delay: 30
+      test_command: uptime
+...

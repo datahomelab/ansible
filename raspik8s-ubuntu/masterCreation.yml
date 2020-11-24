@@ -1,38 +1,51 @@
+---
+
 - hosts: k8sMasters
   become: yes
+
   tasks:
 
-    - name: install kubectl
-      apt:
-        name: kubectl=1.19.0-00
-        state: present
-        force: yes
+  - include: oh-my-zsh.yml
 
-    - name: initialize the cluster with standard Flannel subnet
-      shell: kubeadm init --pod-network-cidr=10.244.0.0/16 >> cluster_initialized.txt
-      args:
-        chdir: $HOME
-        creates: cluster_initialized.txt
+  - name: Installing kubectl, golang and build-essential
+    apt:
+      name: "{{ item }}"
+      update_cache: true
+      state: present
+    with_items:
+      - kubectl=1.19.0-00
+      - build-essential
+      - golang
 
-    - name: create .kube directory
-      become: yes
-      become_user: christian
-      file:
-        path: $HOME/.kube
-        state: directory
-        mode: 0755
+  - name: Pulling k8s images
+    shell:
+      cmd: kubeadm config images pull
 
-    - name: copy admin.conf to ansible user home inside kube folder config
-      copy:
-        src: /etc/kubernetes/admin.conf
-        dest: /home/christian/.kube/config
-        remote_src: yes
-        owner: christian
+  - name: Initializing the cluster with standard Flannel subnet
+    shell: kubeadm init --pod-network-cidr=10.244.0.0/16 >> /home/christian/cluster_initialized.txt
+    args:
+      chdir: /home/christian/
+      creates: cluster_initialized.txt
 
-    - name: install Pod network
-      become: yes
-      become_user: christian
-      shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml >> flannel_pod_network_setup.txt
-      args:
-        chdir: $HOME
-        creates: flannel_pod_network_setup.txt
+  - name: Creating .kube directory
+    become: yes
+    become_user: christian
+    file:
+      path: $HOME/.kube
+      state: directory
+      mode: 0755
+
+  - name: Copying admin.conf
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: /home/christian/.kube/config
+      remote_src: yes
+      owner: christian
+
+  - name: Installing pod network
+    become: yes
+    become_user: christian
+    shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml >> /home/christian/flannel_pod_network_setup.txt
+    args:
+      chdir: /home/christian/
+      creates: flannel_pod_network_setup.txt
