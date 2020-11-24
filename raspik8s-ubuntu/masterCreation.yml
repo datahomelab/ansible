@@ -10,10 +10,11 @@
   - name: Installing kubectl, golang and build-essential
     apt:
       name: "{{ item }}"
-      update_cache: true
       state: present
+      update_cache: true
+
     with_items:
-      - kubectl=1.19.0-00
+      - kubectl
       - build-essential
       - golang
 
