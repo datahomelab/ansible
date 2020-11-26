@@ -7,10 +7,23 @@
 
   tasks:
 
-  - name: Uninstalling snap
+  - name: Uninstall X11
     apt:
-      pkg: snapd
+      name: "{{ item }}"
       state: absent
+      update_cache: true
+    with_items:
+      - x11-common
+      - bluez
+      - gnome-menus
+      - gnome-icon-theme
+      - gnome-themes-standard
+      - hicolor-icon-theme
+      - gnome-themes-extra-data
+      - bluealsa
+      - cifs-utils
+      - desktop-base
+      - desktop-file-utils
 
   - name: Cleaning unwanted old stuff
     apt:

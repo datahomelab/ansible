@@ -5,9 +5,9 @@
 
   tasks:
 
-  - name: Set hostname from inventory file
-    hostname:
-      name: "{{ inventory_hostname }}"
+  - name: Setting hostname
+    shell:
+      cmd: raspi-config nonint do_hostname "{{ inventory_hostname }}"
 
   - name: Setting timezone to Asia/Kuala_Lumpur
     timezone:
@@ -18,9 +18,9 @@
       name: sudo
       state: present
 
-  - name: Remove user "ubuntu"
+  - name: Remove user pi
     user:
-      name: ubuntu
+      name: pi
       state: absent
       remove: yes
 
@@ -43,21 +43,40 @@
       insertafter: "^#root"
       line: "christian ALL=(ALL) NOPASSWD: ALL"
 
-  - name: Set the swap to off
-    shell:
-      cmd: swapoff -a
-
-  - name: Removing swap entry from /etc/fstab if present
+  - name: Remove Swap entry from /etc/fstab.
     lineinfile:
       dest: /etc/fstab
       regexp: swap
       state: absent
+    register: task_result
+
+  - name: Set the swap to off
+    shell:
+      cmd: dphys-swapfile swapoff
+
+  - name: Set the swap to off
+    shell:
+      cmd: dphys-swapfile uninstall
+
+  - name: Set the swap to off
+    shell:
+      cmd: update-rc.d dphys-swapfile remove
+
+  - name: Set the swap to off
+    shell:
+      cmd: systemctl disable dphys-swapfile.service
+
+  - name: Ensure the swap size is 0
+    lineinfile:
+      path: /etc/dphys-swapfile
+      regexp: '^CONF_SWAPSIZE'
+      line: CONF_SWAPSIZE=0
 
   - name: Overclocking to 1800GHz
     lineinfile:
       state: present
       insertafter: EOF
-      dest: /boot/firmware/config.txt
+      dest: /boot/config.txt
       line: "{{ item }}"
     with_items:
       - 'over_voltage=5'
@@ -65,11 +84,11 @@
       - 'gpu_freq=750'
 
   - name: Checking cmdline.txt for cgroup
-    shell: cat /boot/firmware/cmdline.txt | grep -c 'lcgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1' || true
+    shell: cat /boot/cmdline.txt | grep -c 'lcgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1' || true
     register: task_result
 
   - name: Adding cgroup to the end of cmdline.txt
-    replace: dest=/boot/firmware/cmdline.txt regexp='(\s+)$' replace=' cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1'
+    replace: dest=/boot/cmdline.txt regexp='(\s+)$' replace=' cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1'
     when: task_result is changed
 
   - name: "Disable ChallengeResponseAuthentication via SSH"
