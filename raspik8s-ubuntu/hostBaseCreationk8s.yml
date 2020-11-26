@@ -4,8 +4,6 @@
   remote_user: christian
   become: yes
   become_method: sudo
-  vars:
-    base_dir: /home/christian
 
   tasks:
 
@@ -35,19 +33,17 @@
       test_command: uptime
     when: task_result is changed
 
-  - name: Installing miscellaneous packages
-    apt:
-      name: "{{ item }}"
+  - name: Adding apt-key for docker
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
       state: present
-      update_cache: true
-    with_items:
-        - screenfetch
-        - lolcat
-        - ntp
-        - apt-transport-https
-        - gnupg2
-        - ca-certificates
-        - software-properties-common
+
+  - name: Adding apt repo for docker
+    apt_repository:
+      repo: deb https://download.docker.com/linux/ubuntu xenial stable
+      state: present
+      filename: 'docker'
+      update_cache: false
 
   - name: Uncommenting line from /etc/sysctl.conf
     lineinfile:
@@ -63,36 +59,29 @@
       - update-alternatives --set iptables /usr/sbin/iptables-legacy
       - update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 
-  - name: Adding apt-key for docker
-    apt_key:
-      url: https://download.docker.com/linux/debian/gpg
-      state: present
-
-  - name: Adding apt repo for docker
-    apt_repository:
-      repo: deb https://download.docker.com/linux/debian buster stable
-      state: present
-      filename: 'docker'
-
-  - name: Installing docker packages
+  - name: Installing miscellaneous packages
     apt:
       name: "{{ item }}"
       state: present
       update_cache: true
     with_items:
+      - screenfetch
+      - lolcat
+      - ntp
+      - apt-transport-https
+      - curl
+      - gnupg2
+      - ca-certificates
+      - software-properties-common
       - docker-ce
+      - docker-ce-cli
+      - containerd.io
 
   - name: Adding username to the docker group
     user:
       name: "christian"
       groups: "docker"
       state: "present"
-
-  - name: Starting docker service
-    systemd:
-      name: docker.service
-      state: started
-      enabled: yes
 
   - name: Copy /etc/docker/daemon.json using symbolic representation
     copy:
@@ -101,26 +90,23 @@
       mode: u=rw,g=r,o=r
     register: task_result
 
-  - name: Rebooting the cluster after updating docker daemon
-    reboot:
-      connect_timeout: 5
-      reboot_timeout: 300
-      pre_reboot_delay: 0
-      post_reboot_delay: 30
-      test_command: uptime
-    when: task_result is changed
+  - name: Starting docker service
+    systemd:
+      name: docker.service
+      state: reloaded
+      enabled: yes
+
+  - name: Adding apt-key for kubernetes
+    get_url:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      dest: /etc/apt/trusted.gpg.d/
 
   - name: Adding apt repo for kubernetes
     apt_repository:
-      repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
       state: present
       filename: 'kubernetes'
       update_cache: false
-
-  - name: Adding apt-key for kubernetes
-    apt_key:
-      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-      state: present
 
   - name: Installing kubernetes packages
     apt:
@@ -128,37 +114,13 @@
       state: present
       update_cache: true
     with_items:
-        - kubelet
         - kubeadm
+        - kubelet
 
-  - name: Downloading better htop
-    get_url:
-      url: https://github.com/avafinger/htop_2.2.2/releases/download/v1.8/htop_2.2.2-8_arm64.deb
-      dest: /tmp/htop_2.2.2-8_arm64.deb
-
-  - name: Installing htop
-    shell: dpkg -i htop_2.2.2-8_arm64.deb
-    args:
-      chdir: /tmp/
-
-  - name: Cleaning up htop
-    file:
-      path: /tmp/htop_2.2.2-8_arm64.deb
-      state: absent
-
-  - name: Creating htop config directory
-    become: yes
-    become_user: christian
-    file:
-      path: /home/christian/.config/htop
-      state: directory
-
-  - name: Copying htoprc to config directory
-    become: yes
-    become_user: christian
-    copy:
-      src: "{{ lookup('env', 'PWD') }}/support/htoprc"
-      dest: /home/christian/.config/htop/htoprc
+  - name: Starting kubelet service, and enabling it persistently
+    service:
+     name: kubelet
+     enabled: yes
 
   - name: Rebooting the cluster before deploying kubernetes
     reboot:

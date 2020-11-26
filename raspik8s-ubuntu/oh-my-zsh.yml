@@ -1,5 +1,5 @@
 ---
-  - name: Install zsh with apt
+  - name: Installing zsh with apt
     apt:
       name: "{{ item }}"
       state: present
