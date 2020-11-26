@@ -1,0 +1,58 @@
+---
+  - name: Installing zsh with apt
+    apt:
+      name: "{{ item }}"
+      state: present
+      update_cache: true
+    with_items:
+      - git
+      - curl
+      - zsh
+
+  - name: Changing shell to zsh
+    user:
+      name: christian
+      shell: /bin/zsh
+
+  - name: Checking if oh-my-zsh exists
+    stat:
+      path: "/home/christian/.oh-my-zsh"
+    register: OMZ_dir
+
+  - name: Installing oh-my-zsh
+    become: yes
+    become_user: christian
+    shell:
+      cmd: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    when: OMZ_dir.stat.exists == 0
+
+  - name: Installing powerlevel10k
+    become: yes
+    become_user: christian
+    git:
+      repo: https://github.com/romkatv/powerlevel10k.git
+      dest: "/home/christian/.oh-my-zsh/custom/themes/powerlevel10k"
+    when: OMZ_dir.stat.exists == 0
+
+  - name: Installing zsh-syntax-highlighting
+    become: yes
+    become_user: christian
+    git:
+      repo: "https://github.com/zsh-users/{{ item }}.git"
+      dest: "/home/christian/.oh-my-zsh/custom/plugins/{{ item }}"
+    with_items:
+      - 'zsh-autosuggestions'
+      - 'zsh-syntax-highlighting'
+      - 'zsh-history-substring-search'
+    when: OMZ_dir.stat.exists == 0
+
+  - name: Copy .zshrc, .p10k.zsh and .zprofile with owner and permission
+    become: yes
+    become_user: christian
+    copy:
+      src: "{{ lookup('env', 'PWD') }}/support/{{ item }}"
+      dest: "/home/christian/{{ item }}"
+    with_items:
+      - '.zshrc'
+      - '.p10k.zsh'
+      - '.zprofile'

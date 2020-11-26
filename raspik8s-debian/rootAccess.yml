@@ -1,0 +1,21 @@
+---
+
+# Run: ansible-playbook rootAccess.yml --ask-pass
+# to prepare RaspberryPi OS images for ansible access
+
+- hosts: all
+  remote_user: ubuntu
+  become: yes
+
+  tasks:
+
+  - name: Adding authorized keys to root
+    authorized_key:
+      user: "root"
+      key: "{{ lookup('file', '/home/christian/.ssh/id_rsa.pub') }}"
+
+  - name: Enabling root login via SSH
+    lineinfile:
+      dest: "/etc/ssh/sshd_config"
+      regexp: "^#PermitRootLogin"
+      line: "PermitRootLogin yes"

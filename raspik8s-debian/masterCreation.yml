@@ -1,0 +1,51 @@
+---
+
+- hosts: k8sMasters
+  become: yes
+
+  tasks:
+
+  - include: oh-my-zsh.yml
+
+  - name: Installing kubectl, golang and build-essential
+    apt:
+      name: "{{ item }}"
+      state: present
+      update_cache: true
+    with_items:
+      - kubectl
+      - build-essential
+      - golang
+
+  - name: Pulling k8s images
+    shell:
+      cmd: kubeadm config images pull
+
+  - name: Initializing the cluster with standard Flannel subnet
+    shell: kubeadm init --pod-network-cidr=10.244.0.0/16 >> /home/christian/cluster_initialized.txt
+    args:
+      chdir: /home/christian/
+      creates: cluster_initialized.txt
+
+  - name: Creating .kube directory
+    become: yes
+    become_user: christian
+    file:
+      path: $HOME/.kube
+      state: directory
+      mode: 0755
+
+  - name: Copying admin.conf
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: /home/christian/.kube/config
+      remote_src: yes
+      owner: christian
+
+  - name: Installing pod network
+    become: yes
+    become_user: christian
+    shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml >> /home/christian/flannel_pod_network_setup.txt
+    args:
+      chdir: /home/christian/
+      creates: flannel_pod_network_setup.txt
