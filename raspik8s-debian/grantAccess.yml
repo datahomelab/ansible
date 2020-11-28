@@ -33,7 +33,7 @@
   - name: Adding authorized keys
     authorized_key:
       user: "christian"
-      key: "{{ lookup('file', '/home/christian/.ssh/id_rsa.pub') }}"
+      key: "{{ lookup('file', '/Users/christian/.ssh/id_rsa.pub') }}"
 
   - name: Allowing admin users to sudo without a password
     lineinfile:
@@ -116,6 +116,11 @@
       dest: "/etc/ssh/sshd_config"
       regexp: "^PermitRootLogin"
       line: "PermitRootLogin no"
+
+  - name: Expand the file system (RaspberryPi OS)
+    shell:
+      cmd: raspi-config nonint do_expand_rootfs
+    when: task_result is changed
 
   - name: Rebooting the cluster to apply hardware configuration changes
     remote_user: christian

@@ -12,7 +12,7 @@
   - name: Adding authorized keys to root
     authorized_key:
       user: "root"
-      key: "{{ lookup('file', '/home/christian/.ssh/id_rsa.pub') }}"
+      key: "{{ lookup('file', '/Users/christian/.ssh/id_rsa.pub') }}"
 
   - name: Enabling root login via SSH
     lineinfile:
